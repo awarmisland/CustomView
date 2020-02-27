@@ -6,8 +6,10 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.LinearInterpolator;
 
 import androidx.annotation.Nullable;
@@ -51,9 +53,9 @@ public class WaveView extends View {
         mPaint.setStyle(Paint.Style.FILL);
         mTextPaint = new Paint();
         mTextPaint.setColor(Color.parseColor("#6A5ACD"));
-        mTextPaint.setTextSize(DensityUtil.dip2px(getContext(),18));
+        mTextPaint.setTextSize(DensityUtil.dip2px(getContext(),25));
         //波纹的长度
-        mWaveDx = getResources().getDisplayMetrics().widthPixels;
+//        mWaveDx = getResources().getDisplayMetrics().widthPixels;
     }
 
 
@@ -65,6 +67,7 @@ public class WaveView extends View {
         mHeight = MeasureUtils.measureView(heightMeasureSpec,300);
         //水波纹高度
         mWaveHeight = DensityUtil.dip2px(getContext(),16);
+        mWaveDx = mWidth;
     }
 
     @Override
@@ -72,7 +75,12 @@ public class WaveView extends View {
         super.onDraw(canvas);
         drawWave(canvas);
         drawText(canvas);
+//        Path path = new Path();
+//        path.addCircle(getWidth()/2,getHeight()/2,getWidth()/2, Path.Direction.CW);
+//        canvas.drawPath(path,mPaint);
     }
+
+
     private void drawText(Canvas canvas){
         //文字
         String text = Double.valueOf(((double)dy)/mHeight * 100).intValue()+"%";
@@ -81,6 +89,7 @@ public class WaveView extends View {
         float y = getHeight()/2 + (Math.abs(fontMetrics.ascent) - fontMetrics.descent)/2;
         canvas.drawText(text,(getWidth()-textWidth)/2,y,mTextPaint);
     }
+
     private void drawWave(Canvas canvas){
 //        Log.d("wave_view",""+dx);
         Path path = new Path();
@@ -96,6 +105,12 @@ public class WaveView extends View {
         //绘制封闭的区域
         path.lineTo(mWidth,mHeight);
         path.lineTo(0,mHeight);
+
+        //画圆，然后裁剪
+        Path circlePath = new Path();
+        circlePath.addCircle(getWidth()/2,getHeight()/2,getHeight()/2, Path.Direction.CW);
+        path.op(circlePath, Path.Op.INTERSECT);
+
         //path.close() 绘制封闭的区域
         path.close();
         if(mPaint!=null){
@@ -103,7 +118,20 @@ public class WaveView extends View {
         }
     }
 
+
+
     public void startAnimation(){
+        post(new Runnable() {
+            @Override
+            public void run() {
+                startXAnim();
+                startYAnim();
+            }
+        });
+    }
+
+
+    private void startXAnim(){
         ValueAnimator valueAnimator = ValueAnimator.ofInt(0,mWaveDx);
         valueAnimator.setDuration(2000);
         valueAnimator.setRepeatCount(ValueAnimator.INFINITE);
@@ -116,19 +144,13 @@ public class WaveView extends View {
             }
         });
         valueAnimator.start();
-        post(new Runnable() {
-            @Override
-            public void run() {
-                startYAnim();
-            }
-        });
     }
 
     private void startYAnim(){
         mYValueAnimator = ValueAnimator.ofInt(0,mHeight);
-        mYValueAnimator.setDuration(4000);
+        mYValueAnimator.setDuration(6000);
         mYValueAnimator.setRepeatCount(ValueAnimator.INFINITE);
-        mYValueAnimator.setInterpolator(new LinearInterpolator());
+        mYValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         mYValueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
